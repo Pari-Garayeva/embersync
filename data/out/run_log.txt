@@ -1,0 +1,204 @@
+{
+  "run": {
+    "inputs": [
+      "fire_archive_M6_155743.csv",
+      "fire_archive_V1_155745.csv",
+      "fire_nrt_J1V-C2_155744.csv"
+    ],
+    "grid_res_deg": 0.1,
+    "min_conf": "l",
+    "seconds_ingest": 7.2,
+    "seconds_fuse": 1.2,
+    "seconds_total": 9.3
+  },
+  "volume": {
+    "detections_in": 2057079,
+    "static_source_removed": 58864,
+    "unique_hotspot_pixels": 518592,
+    "duplicate_reduction_pct": 74.0,
+    "burning_cell_days": 82954,
+    "platform_counts": {
+      "S-NPP": 1182321,
+      "NOAA-20": 649889,
+      "Aqua": 123957,
+      "Terra": 100912
+    },
+    "platform_coverage": {
+      "Aqua": {
+        "min": "2019-09-01",
+        "max": "2020-03-31"
+      },
+      "NOAA-20": {
+        "min": "2019-12-04",
+        "max": "2020-03-31"
+      },
+      "S-NPP": {
+        "min": "2019-09-01",
+        "max": "2020-03-31"
+      },
+      "Terra": {
+        "min": "2019-09-01",
+        "max": "2020-03-31"
+      }
+    }
+  },
+  "agreement": {
+    "cell_days": 82954,
+    "both_same_cell": 34829,
+    "both_neighbour": 17783,
+    "modis_only": 2295,
+    "viirs_only": 28047,
+    "agreement_rate": 0.6342,
+    "noaa20_only_cell_days": 7448
+  },
+  "flags": {
+    "new_ignitions": 14534,
+    "escalating": 5261
+  },
+  "national_peak": {
+    "date": "2020-01-04",
+    "active_cells": 1044,
+    "frp_gw": 3078.52
+  }
+}
+[
+  {
+    "region": "Australia (all)",
+    "peak_date": "2020-01-04",
+    "peak_frp_gw": 3078.52,
+    "first_high_alert": "2019-12-09",
+    "lead_days": 26,
+    "active_cell_days": 82954
+  },
+  {
+    "region": "New South Wales",
+    "peak_date": "2020-01-04",
+    "peak_frp_gw": 2883.77,
+    "first_high_alert": "2019-12-07",
+    "lead_days": 28,
+    "active_cell_days": 24013
+  },
+  {
+    "region": "Victoria",
+    "peak_date": "2020-01-04",
+    "peak_frp_gw": 2847.71,
+    "first_high_alert": "2019-11-25",
+    "lead_days": 40,
+    "active_cell_days": 8505
+  },
+  {
+    "region": "Queensland",
+    "peak_date": "2019-12-17",
+    "peak_frp_gw": 158.99,
+    "first_high_alert": "2019-11-11",
+    "lead_days": 36,
+    "active_cell_days": 26010
+  },
+  {
+    "region": "Western Australia",
+    "peak_date": "2019-12-29",
+    "peak_frp_gw": 597.64,
+    "first_high_alert": "2019-12-15",
+    "lead_days": 14,
+    "active_cell_days": 16943
+  },
+  {
+    "region": "Northern Territory",
+    "peak_date": "2019-10-21",
+    "peak_frp_gw": 99.19,
+    "first_high_alert": "2019-10-20",
+    "lead_days": 1,
+    "active_cell_days": 14051
+  },
+  {
+    "region": "South Australia",
+    "peak_date": "2020-01-03",
+    "peak_frp_gw": 205.66,
+    "first_high_alert": "2019-12-20",
+    "lead_days": 14,
+    "active_cell_days": 1621
+  },
+  {
+    "region": "Tasmania",
+    "peak_date": "2020-01-02",
+    "peak_frp_gw": 20.88,
+    "first_high_alert": "2020-01-02",
+    "lead_days": 0,
+    "active_cell_days": 1175
+  },
+  {
+    "region": "Kangaroo Island",
+    "peak_date": "2020-01-03",
+    "peak_frp_gw": 187.82,
+    "first_high_alert": "2019-12-23",
+    "lead_days": 11,
+    "active_cell_days": 237
+  },
+  {
+    "region": "NSW South Coast (Black Summer core)",
+    "peak_date": "2020-01-04",
+    "peak_frp_gw": 777.35,
+    "first_high_alert": "2019-11-30",
+    "lead_days": 35,
+    "active_cell_days": 3462
+  }
+]
+{
+  "modis_sensitivity_by_viirs_frp": [
+    {
+      "frp_bin_mw": "<5",
+      "p_modis_detects": 0.282,
+      "n": 15521
+    },
+    {
+      "frp_bin_mw": "5-10",
+      "p_modis_detects": 0.411,
+      "n": 8433
+    },
+    {
+      "frp_bin_mw": "10-25",
+      "p_modis_detects": 0.529,
+      "n": 12043
+    },
+    {
+      "frp_bin_mw": "25-50",
+      "p_modis_detects": 0.676,
+      "n": 8975
+    },
+    {
+      "frp_bin_mw": "50-100",
+      "p_modis_detects": 0.783,
+      "n": 8642
+    },
+    {
+      "frp_bin_mw": "100-250",
+      "p_modis_detects": 0.886,
+      "n": 9777
+    },
+    {
+      "frp_bin_mw": "250-500",
+      "p_modis_detects": 0.957,
+      "n": 5657
+    },
+    {
+      "frp_bin_mw": ">500",
+      "p_modis_detects": 0.987,
+      "n": 8676
+    }
+  ],
+  "frp_ratio_viirs_over_modis": 1.3965,
+  "frp_log_correlation": 0.7242,
+  "frp_pairs": 34810
+}
+{
+  "model": "log1p(VIIRS_cells) = a + b*log1p(MODIS_cells) + c*log1p(MODIS_FRP), 1-degree tile x day",
+  "a": 0.7512,
+  "b": 0.9516,
+  "c": -0.0898,
+  "train_days": "2019-09-01 .. 2019-11-28",
+  "test_days": "2019-11-29 .. 2020-03-31",
+  "tile_r2_test": 0.4943,
+  "daily_mape_test_model": 0.2566,
+  "daily_mape_test_raw_modis": 0.6043,
+  "split_day": 89
+}

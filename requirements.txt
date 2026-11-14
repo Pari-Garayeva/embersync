@@ -1,0 +1,6 @@
+pandas>=2.0
+numpy>=1.24
+pyarrow>=14
+pytest>=7
+# optional, e2e browser test
+playwright>=1.40

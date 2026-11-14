@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EmberSync — Harmonized MODIS + VIIRS Fire Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#0f0f0e; --surface-1:#1a1a19; --surface-2:#232321; --line:#33332f; --grid:#2b2b28;
+  --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8d8c84;
+  --s-both:#3987e5; --s-viirs:#d95926; --s-modis:#199e70;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --accent:#ef6c1a;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-primary);font:14px/1.5 Inter,system-ui,sans-serif}
+a{color:#86b6ef}
+header{position:sticky;top:0;z-index:20;background:rgba(15,15,14,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1440px;margin:0 auto;padding:0 20px}
+.hdr{display:flex;align-items:center;gap:18px;height:62px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.2px}
+.logo svg{width:28px;height:28px}
+.tag{color:var(--text-muted);font-size:13px}
+.hdr .sp{flex:1}
+select,button{font:inherit;color:var(--text-primary);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+button:hover,select:hover{border-color:#55554f}
+button.on{background:#2d2116;border-color:var(--accent);color:#ffd3b0}
+.hero{padding:22px 0 8px}
+.hero h1{font-size:26px;margin:0 0 4px;letter-spacing:-.4px}
+.hero p{margin:0;color:var(--text-secondary);max-width:980px}
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;margin-top:16px}
+@media (max-width:1050px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface-1);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:600}
+.card .sub{color:var(--text-muted);font-size:12.5px;margin:0 0 12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:var(--surface-2);border-radius:10px;padding:10px 12px}
+.kpi .l{font-size:11.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-size:22px;font-weight:700;font-family:var(--mono);margin-top:2px}
+.kpi .d{font-size:12px;color:var(--text-secondary)}
+.alert-badge{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.alert-badge i{width:10px;height:10px;border-radius:50%;display:inline-block}
+#mapwrap{position:relative}
+#map{display:block;width:100%;border-radius:10px;background:#141413}
+#mapsvg{position:absolute;inset:0}
+.tt{position:fixed;pointer-events:none;z-index:50;background:#0b0b0b;border:1px solid #44443f;border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--text-primary);box-shadow:0 6px 24px rgba(0,0,0,.5);display:none;max-width:280px}
+.tt b{font-weight:600}
+.tt .k{color:var(--text-muted)}
+.timebar{display:flex;align-items:center;gap:10px;margin-top:10px}
+.timebar input[type=range]{flex:1;accent-color:var(--accent)}
+.date{font-family:var(--mono);font-weight:600;min-width:106px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.ramp{width:120px;height:10px;border-radius:3px}
+svg text{fill:var(--text-secondary);font-family:Inter,system-ui,sans-serif}
+.axis path,.axis line{stroke:var(--grid)}
+.axis text{fill:var(--text-muted);font-size:11px}
+.full{grid-column:1/-1}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--text-muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid #262624}
+td.n{font-family:var(--mono);text-align:right}
+th.n{text-align:right}
+.pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media (max-width:900px){.pipe{grid-template-columns:repeat(2,1fr)}}
+.step{background:var(--surface-2);border-radius:10px;padding:10px;font-size:12.5px;color:var(--text-secondary)}
+.step b{display:block;color:var(--text-primary);font-size:13px;margin-bottom:2px}
+.step .num{font-family:var(--mono);color:var(--accent);font-size:11px}
+.big{font-size:30px;font-weight:700;font-family:var(--mono);color:var(--text-primary)}
+.stat3{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+@media (max-width:900px){.stat3{grid-template-columns:repeat(2,1fr)}}
+.muted{color:var(--text-muted)}
+.pill{font-size:11px;border:1px solid var(--line);border-radius:99px;padding:2px 8px;color:var(--text-secondary)}
+@media (max-width:760px){.tag,.hdr label{display:none}.hdr{gap:8px}#region{max-width:150px}.kpis{grid-template-columns:repeat(2,1fr)}}
+footer{color:var(--text-muted);font-size:12px;padding:28px 0 40px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2d2116;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;display:none;z-index:60}
+</style>
+</head>
+<body>
+<header><div class="wrap hdr">
+  <div class="logo">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#d95926"/><stop offset="1" stop-color="#fbb03b"/></linearGradient></defs><path d="M16 3c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 1 5 3 5-1-5 0-9 1-12z" fill="url(#lg)"/><circle cx="16" cy="20" r="3.2" fill="#3987e5"/></svg>
+    EmberSync
+  </div>
+  <div class="tag">MODIS + VIIRS → one consistent burning-activity record</div>
+  <div class="sp"></div>
+  <label class="muted" for="region">Area</label>
+  <select id="region"></select>
+  <button id="drawBtn" title="Drag a rectangle on the map">▭ Draw area</button>
+</div></header>
+
+<main class="wrap">
+<section class="hero">
+  <h1>A single, sensor-agnostic fire calendar for any area on Earth</h1>
+  <p>EmberSync merges every NASA FIRMS active-fire product (MODIS Terra/Aqua, VIIRS S-NPP / NOAA-20 / NOAA-21) into one de-duplicated, calibrated cell-day record,
+  so a fire season from 2005 can be compared with one from 2025, and surges are flagged early. Demo dataset: <b>Australia's Black Summer</b>,
+  <span id="heroRange"></span> — <span id="heroDet"></span> raw detections from 4 satellites.</p>
+</section>
+
+<div class="grid">
+  <!-- MAP -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><h2>Harmonized fire map</h2><p class="sub" id="mapSub">0.1° grid · local solar day · static sources removed</p></div>
+      <div class="row">
+        <button id="mDay" class="on">Day</button><button id="mSeason">Season total</button>
+        <span class="muted" style="margin:0 2px">|</span>
+        <button id="cInt" class="on">Intensity</button><button id="cAgr">Sensor agreement</button>
+      </div>
+    </div>
+    <div id="mapwrap"><canvas id="map"></canvas><svg id="mapsvg"></svg></div>
+    <div class="timebar">
+      <button id="play" aria-label="Play">▶</button>
+      <input id="slider" type="range" min="0" max="1" value="0" aria-label="Day">
+      <span class="date" id="dateLbl"></span>
+    </div>
+    <div class="legend" id="mapLegend"></div>
+  </div>
+
+  <!-- AREA PANEL -->
+  <div class="card">
+    <h2 id="areaTitle">Area status</h2>
+    <p class="sub" id="areaSub"></p>
+    <div class="kpis" id="kpis"></div>
+    <div style="margin-top:14px">
+      <h2>Burning-activity calendar</h2>
+      <p class="sub">Each square = one local day in the selected area, colored by harmonized FRP (VIIRS scale). Ring = surge alert High/Extreme. Click a day to jump.</p>
+      <svg id="cal" width="100%"></svg>
+      <div class="legend"><span>Low</span><span class="ramp" id="calRamp"></span><span>High FRP</span>
+        <span><i class="sw" style="border:2px solid var(--serious);background:transparent"></i>High alert</span>
+        <span><i class="sw" style="border:2px solid var(--critical);background:transparent"></i>Extreme alert</span></div>
+      <div class="row" style="margin-top:10px">
+        <button id="copyCsv">Copy area CSV</button><button id="dlCsv">Download CSV</button>
+        <span class="muted" style="font-size:12px">daily: active cells, by sensor, FRP, unique hotspots, new ignitions, alert</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAILY -->
+  <div class="card full">
+    <h2>Daily activity by sensor agreement + early-warning strip</h2>
+    <p class="sub">Active 0.1° cells per day in the selected area. Note the step on 4 Dec 2019 when NOAA-20 joins the constellation: an artificial jump that a naive record would read as "more fire". <b>Both</b> = MODIS and VIIRS agree (same or neighbouring cell). <b>VIIRS-only</b> = mostly small fires below MODIS sensitivity. Strip below = surge alert (7-day FRP vs 28-day baseline, intensity-gated).</p>
+    <svg id="daily" width="100%"></svg>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--s-both)"></i>Both sensors</span>
+      <span><i class="sw" style="background:var(--s-viirs)"></i>VIIRS only</span>
+      <span><i class="sw" style="background:var(--s-modis)"></i>MODIS only</span>
+      <span style="margin-left:14px">Alert:</span>
+      <span><i class="sw" style="background:#383835"></i>● Normal</span>
+      <span><i class="sw" style="background:var(--warning)"></i>▲ Elevated</span>
+      <span><i class="sw" style="background:var(--serious)"></i>◆ High</span>
+      <span><i class="sw" style="background:var(--critical)"></i>■ Extreme</span>
+    </div>
+  </div>
+
+  <!-- PROOF -->
+  <div class="card">
+    <h2>Why harmonize? MODIS misses small fires</h2>
+    <p class="sub">Of every cell-day VIIRS sees burning, the share MODIS also detects, by fire size (VIIRS FRP per cell-day). This bias is what breaks a naive MODIS→VIIRS time series.</p>
+    <svg id="sens" width="100%"></svg>
+  </div>
+  <div class="card">
+    <h2>Back-cast: VIIRS-equivalent activity from MODIS alone</h2>
+    <p class="sub">Model trained Sep–Nov 2019, tested out-of-time Dec–Mar. This is how EmberSync extends a consistent record back to 2000 (pre-VIIRS).</p>
+    <div class="stat3" id="bcStats"></div>
+    <svg id="bc" width="100%"></svg>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--s-both)"></i>VIIRS observed</span>
+      <span><i class="sw" style="background:var(--s-modis)"></i>MODIS raw</span>
+      <span><i class="sw" style="background:var(--s-viirs)"></i>EmberSync back-cast</span>
+    </div>
+  </div>
+
+  <!-- LEAD TIME -->
+  <div class="card">
+    <h2>Early-warning validation</h2>
+    <p class="sub">Days between the first High/Extreme surge alert (within 45 days before) and each region's peak-FRP day. Click a row to load the region.</p>
+    <table id="leadTbl"></table>
+  </div>
+
+  <!-- DATA QUALITY -->
+  <div class="card">
+    <h2>Data-quality ledger (this run)</h2>
+    <p class="sub">Every transformation is counted, so analysts can audit the record end-to-end.</p>
+    <table id="dqTbl"></table>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="card full">
+    <h2>How EmberSync works</h2>
+    <p class="sub">A sensor-agnostic pipeline: a new satellite (e.g. NOAA-21, or future JPSS-3/4) is one adapter line, not a new product.</p>
+    <div class="pipe">
+      <div class="step"><span class="num">01</span><b>Ingest & normalize</b>Every FIRMS CSV variant → one schema. MODIS 0–100 confidence → l/n/h (FIRMS rule); footprint = scan×track.</div>
+      <div class="step"><span class="num">02</span><b>Local solar day</b>UTC + lon/15 h, so a 01:00 night overpass belongs to the same fire-day as the afternoon one.</div>
+      <div class="step"><span class="num">03</span><b>Static-source mask</b>Gas flares, industry, volcanoes, offshore learned from archive <i>type</i> + persistence, then applied to NRT data that lacks <i>type</i>.</div>
+      <div class="step"><span class="num">04</span><b>De-duplicate</b>Same hotspot seen by 2–4 satellites the same day counts once (0.01° micro-grid).</div>
+      <div class="step"><span class="num">05</span><b>Fuse & calibrate</b>Cell-day fusion, noisy-OR confidence, FRP cross-calibration MODIS→VIIRS scale, sensitivity curve, back-cast model.</div>
+      <div class="step"><span class="num">06</span><b>Calendar & alerts</b>Any bbox → daily calendar, new ignitions, escalating cells, surge alert. Exports CSV / Parquet / JSON API.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Data: NASA FIRMS — MODIS Collection 6 (MCD14ML, Terra & Aqua) and VIIRS 375 m (VNP14IMG S-NPP archive, VJ114IMG NOAA-20 NRT), LANCE/FIRMS, NASA EOSDIS. Basemap: Natural Earth.
+  EmberSync is a NASA Space Apps Challenge 2026 project — not an official NASA product. Region boxes are approximate bounding boxes.
+</footer>
+</main>
+
+<div class="tt" id="tt"></div>
+<div class="toast" id="toast"></div>
+
+<script type="application/json" id="payload">/*__PAYLOAD__*/</script>
+<script type="application/json" id="land">/*__LAND__*/</script>
+<script>/*__D3__*/</script>
+<script>
+(function(){
+"use strict";
+const P = JSON.parse(document.getElementById('payload').textContent);
+const LAND = JSON.parse(document.getElementById('land').textContent);
+LAND.features.forEach(f=>{ if(f.geometry.type==='MultiPolygon') f.geometry.coordinates=f.geometry.coordinates.filter(poly=>poly[0].some(c=>c[1]>-45 && c[0]<156)); });
+const R = P.report, M = P.meta;
+
+// ---------- decode columnar typed arrays ----------
+function dec(b64, T){ const s=atob(b64); const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return new T(u.buffer); }
+const cLat=dec(P.cells.lat,Float32Array), cLon=dec(P.cells.lon,Float32Array);
+const D={cell:dec(P.cd.cell,Uint32Array), day:dec(P.cd.day,Uint16Array), bits:dec(P.cd.bits,Uint8Array),
+  agree:dec(P.cd.agree,Uint8Array), flags:dec(P.cd.flags,Uint8Array), q:dec(P.cd.q,Uint8Array),
+  frp:dec(P.cd.frp,Float32Array), pix:dec(P.cd.pix,Uint16Array)};
+const N=P.cd.n, ND=M.ndays, RES=M.grid_res_deg, NCOLS=Math.round(360/RES);
+const t0=new Date(M.start+'T00:00:00Z');
+const dayDate=d=>new Date(t0.getTime()+d*864e5);
+const fmtD=d=>dayDate(d).toISOString().slice(0,10);
+const fmtShort=d3.utcFormat('%d %b %Y');
+const dayOff=new Int32Array(ND+1); { let j=0; for(let d=0;d<ND;d++){ dayOff[d]=j; while(j<N && D.day[j]===d) j++; } dayOff[ND]=N; }
+const cellKey=new Map(); for(let i=0;i<cLat.length;i++){ const r=Math.floor((90-cLat[i])/RES), c=Math.floor((cLon[i]+180)/RES); cellKey.set(r*NCOLS+c,i); }
+const PLAT=[[1,'Terra'],[2,'Aqua'],[4,'S-NPP'],[8,'NOAA-20'],[16,'NOAA-21']];
+const AGREE=['Both (same cell)','Both (neighbour cell)','MODIS only','VIIRS only'];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const COL={both:css('--s-both'),viirs:css('--s-viirs'),modis:css('--s-modis')};
+const AGCOL=[COL.both,COL.both,COL.modis,COL.viirs];
+const LV=[{n:'Normal',c:'#383835',i:'●'},{n:'Elevated',c:css('--warning'),i:'▲'},{n:'High',c:css('--serious'),i:'◆'},{n:'Extreme',c:css('--critical'),i:'■'}];
+const fire=d3.interpolateRgbBasis(['#4a1806','#9c3510','#e0601a','#f79a2e','#ffe08a']);
+const fmtN=d3.format(','), fmtK=d3.format('.3~s');
+
+// ---------- state ----------
+const S={day:0, bbox:M.regions['Australia (all)'], region:'Australia (all)', view:'day', color:'int', series:null, drawing:false};
+const peakIdx=Math.round((new Date(R.national_peak.date+'T00:00:00Z')-t0)/864e5);
+S.day=Math.max(0,Math.min(ND-1,peakIdx));
+
+// ---------- region select ----------
+const sel=document.getElementById('region');
+Object.keys(M.regions).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel.appendChild(o);});
+const oc=document.createElement('option'); oc.value='__custom'; oc.textContent='Custom area'; sel.appendChild(oc);
+sel.value=S.region;
+document.getElementById('heroRange').textContent=fmtShort(dayDate(0))+' – '+fmtShort(dayDate(ND-1));
+document.getElementById('heroDet').textContent=fmtN(R.volume.detections_in);
+
+// ---------- area series (same algorithm as embersync/warning.py) ----------
+function computeSeries(bb){
+  const [x0,y0,x1,y1]=bb, inC=new Uint8Array(cLat.length);
+  for(let i=0;i<cLat.length;i++) inC[i]=(cLon[i]>=x0&&cLon[i]<=x1&&cLat[i]>=y0&&cLat[i]<=y1)?1:0;
+  const z=()=>new Float64Array(ND);
+  const s={active:z(),both:z(),vonly:z(),monly:z(),frp:z(),pix:z(),ign:z(),esc:z()};
+  for(let i=0;i<N;i++){ if(!inC[D.cell[i]]) continue; const d=D.day[i], a=D.agree[i];
+    s.active[d]++; if(a<2) s.both[d]++; else if(a===2) s.monly[d]++; else s.vonly[d]++;
+    s.frp[d]+=D.frp[i]; s.pix[d]+=D.pix[i]; if(D.flags[i]&1) s.ign[d]++; if(D.flags[i]&2) s.esc[d]++; }
+  // surge alert
+  const lvl=new Uint8Array(ND), ratio=new Float64Array(ND);
+  for(let d=0;d<ND;d++){
+    if(d<6){continue;}
+    let a7=0,f7=0; for(let k=d-6;k<=d;k++){a7+=s.active[k];f7+=s.frp[k];} a7/=7; f7/=7;
+    let b=0,nb=0; for(let k=Math.max(0,d-34);k<=d-7;k++){b+=s.frp[k];nb++;}
+    if(nb<14) continue; b/=nb;
+    const r=(f7+100)/(b+100); ratio[d]=r; const inten=a7>0?f7/a7:0;
+    let L=r>=4?3:r>=2.5?2:r>=1.5?1:0; if(a7<5||inten<100) L=0; lvl[d]=L; }
+  s.lvl=lvl; s.ratio=ratio; return s;
+}
+
+// ---------- map ----------
+const canvas=document.getElementById('map'), ctx=canvas.getContext('2d'), msvg=d3.select('#mapsvg');
+let proj, W=0, H=0;
+function sizeMap(){
+  const w=document.getElementById('mapwrap').clientWidth; W=w; H=Math.round(w*0.86);
+  const dpr=window.devicePixelRatio||1; canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.height=H+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  proj=d3.geoMercator().fitExtent([[8,8],[W-8,H-8]],{type:'MultiPoint',coordinates:[[112.5,-9.2],[154.2,-9.2],[154.2,-44],[112.5,-44]]});
+  msvg.attr('width',W).attr('height',H).attr('viewBox',`0 0 ${W} ${H}`);
+  setupBrush();
+}
+const landPath=()=>d3.geoPath(proj,ctx);
+let viewIdx=new Map();
+function drawMap(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#24241f'; ctx.strokeStyle='#4a4a44'; ctx.lineWidth=0.8;
+  ctx.beginPath(); landPath()(LAND); ctx.fill(); ctx.stroke();
+  viewIdx=new Map();
+  const px=Math.max(2, Math.abs(proj([0.1,-30])[0]-proj([0,-30])[0])+0.6);
+  const norm=v=>Math.max(0,Math.min(1,(Math.log10(v+1)-0.5)/3.3));
+  if(S.view==='day'){
+    for(let i=dayOff[S.day];i<dayOff[S.day+1];i++){ const c=D.cell[i]; const p=proj([cLon[c],cLat[c]]);
+      ctx.fillStyle = S.color==='int' ? fire(norm(D.frp[i])) : AGCOL[D.agree[i]];
+      ctx.fillRect(p[0]-px/2,p[1]-px/2,px,px); viewIdx.set(c,i); }
+  } else {
+    const tot=new Float64Array(cLat.length), days=new Uint16Array(cLat.length), both=new Uint16Array(cLat.length), vo=new Uint16Array(cLat.length);
+    for(let i=0;i<N;i++){const c=D.cell[i]; tot[c]+=D.frp[i]; days[c]++; if(D.agree[i]<2) both[c]++; else if(D.agree[i]===3) vo[c]++;}
+    for(let c=0;c<cLat.length;c++){ if(!days[c]) continue; const p=proj([cLon[c],cLat[c]]);
+      if(S.color==='int') ctx.fillStyle=fire(Math.max(0,Math.min(1,(Math.log10(tot[c]+1)-1)/3.8)));
+      else { const fb=both[c]/days[c]; ctx.fillStyle = fb>=0.5?COL.both : (vo[c]>=days[c]-both[c]?COL.viirs:COL.modis); }
+      ctx.fillRect(p[0]-px/2,p[1]-px/2,px,px); viewIdx.set(c,-1-c); }
+    S._season={tot,days,both,vo};
+  }
+  drawBox();
+  // legend
+  const lg=document.getElementById('mapLegend');
+  lg.innerHTML = S.color==='int'
+    ? `<span>Harmonized FRP ${S.view==='day'?'per cell-day':'season total per cell'}</span><span>low</span><span class="ramp" style="background:linear-gradient(90deg,${[0,.25,.5,.75,1].map(fire).join(',')})"></span><span>high</span><span class="muted">· blue box = selected area · hover a cell for details</span>`
+    : `<span><i class="sw" style="background:${COL.both}"></i>Both sensors</span><span><i class="sw" style="background:${COL.viirs}"></i>VIIRS only</span><span><i class="sw" style="background:${COL.modis}"></i>MODIS only</span><span class="muted">· hover a cell for details</span>`;
+  document.getElementById('dateLbl').textContent = S.view==='day'? fmtD(S.day) : 'Whole season';
+}
+function drawBox(){
+  msvg.selectAll('rect.sel').remove();
+  if(S.drawing) return;
+  const [x0,y0,x1,y1]=S.bbox; const a=proj([x0,y1]), b=proj([x1,y0]);
+  msvg.append('rect').attr('class','sel').attr('x',a[0]).attr('y',a[1]).attr('width',b[0]-a[0]).attr('height',b[1]-a[1])
+    .attr('fill','none').attr('stroke','#86b6ef').attr('stroke-width',1.5).attr('stroke-dasharray','5 3').attr('pointer-events','none');
+}
+let brushG=null, brush=null;
+function setupBrush(){
+  msvg.selectAll('g.brush').remove();
+  brush=d3.brush().extent([[0,0],[W,H]]).on('end',ev=>{
+    if(!ev.selection){return;}
+    const [[px0,py0],[px1,py1]]=ev.selection; const a=proj.invert([px0,py1]), b=proj.invert([px1,py0]);
+    S.bbox=[+a[0].toFixed(2),+a[1].toFixed(2),+b[0].toFixed(2),+b[1].toFixed(2)]; S.region='Custom area'; sel.value='__custom';
+    S.drawing=false; document.getElementById('drawBtn').classList.remove('on');
+    brushG.call(brush.move,null); brushG.style('display','none'); refreshArea(); drawBox();
+  });
+  brushG=msvg.append('g').attr('class','brush').call(brush).style('display','none');
+  brushG.selectAll('.selection').attr('stroke','#86b6ef').attr('fill','#3987e5').attr('fill-opacity',.12);
+}
+document.getElementById('drawBtn').onclick=()=>{ S.drawing=!S.drawing; document.getElementById('drawBtn').classList.toggle('on',S.drawing); brushG.style('display',S.drawing?null:'none'); drawBox(); };
+
+// map tooltip
+const tt=document.getElementById('tt');
+function showTT(ev,html){ tt.innerHTML=html; tt.style.display='block'; const x=Math.min(ev.clientX+14, innerWidth-300), y=Math.min(ev.clientY+14, innerHeight-170); tt.style.left=x+'px'; tt.style.top=y+'px'; }
+function hideTT(){ tt.style.display='none'; }
+canvas.parentElement.addEventListener('mousemove',ev=>{
+  if(S.drawing) return hideTT();
+  const r=canvas.getBoundingClientRect(); const ll=proj.invert([ev.clientX-r.left, ev.clientY-r.top]);
+  let best=null;
+  for(let dr=-1;dr<=1&&best===null;dr++) for(let dc=-1;dc<=1;dc++){
+    const row=Math.floor((90-ll[1])/RES)+dr, col=Math.floor((ll[0]+180)/RES)+dc; const c=cellKey.get(row*NCOLS+col);
+    if(c!==undefined && viewIdx.has(c)){ best=c; if(dr===0&&dc===0) break; } }
+  if(best===null) return hideTT();
+  const i=viewIdx.get(best);
+  if(i>=0){ const sens=PLAT.filter(p=>D.bits[i]&p[0]).map(p=>p[1]).join(', ');
+    const fl=[(D.flags[i]&1)?'🟠 new ignition':'',(D.flags[i]&2)?'🔺 escalating':''].filter(Boolean).join(' · ');
+    showTT(ev,`<b>${fmtD(D.day[i])}</b> · cell ${cLat[best].toFixed(2)}, ${cLon[best].toFixed(2)}<br><span class="k">Satellites:</span> ${sens}<br><span class="k">Agreement:</span> ${AGREE[D.agree[i]]}<br><span class="k">Harmonized FRP:</span> ${D.frp[i].toFixed(1)} MW<br><span class="k">Unique hotspots:</span> ${D.pix[i]} · <span class="k">fused confidence:</span> ${D.q[i]}%${fl?'<br>'+fl:''}`);
+  } else { const s=S._season, c=best;
+    showTT(ev,`<b>Season total</b> · cell ${cLat[c].toFixed(2)}, ${cLon[c].toFixed(2)}<br><span class="k">Burning days:</span> ${s.days[c]}<br><span class="k">Both sensors:</span> ${s.both[c]} days · <span class="k">VIIRS-only:</span> ${s.vo[c]}<br><span class="k">Harmonized FRP:</span> ${fmtK(s.tot[c])}W·day`.replace('W·day',' MW·day')); }
+});
+canvas.parentElement.addEventListener('mouseleave',hideTT);
+
+// ---------- KPIs ----------
+function kpis(){
+  const s=S.series, d=S.day, L=LV[s.lvl[d]];
+  const tot=s.active[d], agr=tot?((s.both[d])/tot*100):0;
+  const seasonAct=d3.sum(s.active), seasonBoth=d3.sum(s.both);
+  const cards=[
+    ['Surge alert', `<span class="alert-badge" style="color:${L.c==='#383835'?'var(--text-primary)':L.c}">${L.i} ${L.n}</span>`, `ratio ${s.ratio[d].toFixed(2)}× vs 28-day baseline`],
+    ['Active cells', fmtN(tot), `${fmtN(s.ign[d])} new ignitions · ${fmtN(s.esc[d])} escalating`],
+    ['Harmonized FRP', (s.frp[d]/1000).toFixed(1)+' GW', 'VIIRS-scale, all sensors'],
+    ['Unique hotspots', fmtN(s.pix[d]), 'after cross-satellite de-dup'],
+    ['Sensor agreement', tot? agr.toFixed(0)+'%':'—', `season: ${(seasonBoth/Math.max(seasonAct,1)*100).toFixed(0)}% of cell-days`],
+    ['Season cell-days', fmtN(seasonAct), `peak ${fmtD(d3.maxIndex(s.frp))}`],
+  ];
+  document.getElementById('kpis').innerHTML=cards.map(c=>`<div class="kpi"><div class="l">${c[0]}</div><div class="v">${c[1]}</div><div class="d">${c[2]}</div></div>`).join('');
+  document.getElementById('areaTitle').textContent=S.region+' — '+fmtShort(dayDate(d));
+  const [x0,y0,x1,y1]=S.bbox; document.getElementById('areaSub').textContent=`bbox ${x0}°, ${y0}° → ${x1}°, ${y1}°`;
+}
+
+// ---------- calendar ----------
+function calendar(){
+  const s=S.series, svg=d3.select('#cal'); svg.selectAll('*').remove();
+  const w=svg.node().clientWidth||600, left=40, cell=Math.max(9,Math.min(16,Math.floor((w-left-6)/31)-2)), gap=2;
+  const months=d3.utcMonths(d3.utcMonth.floor(dayDate(0)), d3.utcDay.offset(dayDate(ND-1),1));
+  svg.attr('height', months.length*(cell+gap)+18);
+  const nz=Array.from(s.frp).filter(v=>v>0).sort((a,b)=>a-b); const lo=Math.log10((d3.quantileSorted(nz,0.05)||1)+1), hi=Math.log10((nz[nz.length-1]||10)+1);
+  const norm=v=>v<=0?null:Math.max(0.03,Math.min(1,(Math.log10(v+1)-lo)/Math.max(hi-lo,0.1)));
+  months.forEach((m,mi)=>{ svg.append('text').attr('x',0).attr('y',14+mi*(cell+gap)+cell-2).attr('font-size',11).text(d3.utcFormat('%b %y')(m)); });
+  for(let d=0;d<ND;d++){ const dt=dayDate(d); const mi=months.findIndex(m=>m.getUTCFullYear()===dt.getUTCFullYear()&&m.getUTCMonth()===dt.getUTCMonth());
+    const x=left+(dt.getUTCDate()-1)*(cell+gap), y=14+mi*(cell+gap); const v=norm(s.frp[d]);
+    const r=svg.append('rect').attr('x',x).attr('y',y).attr('width',cell).attr('height',cell).attr('rx',2.5)
+      .attr('fill', v===null?'#262624':fire(v)).style('cursor','pointer');
+    if(s.lvl[d]>=2) r.attr('stroke',LV[s.lvl[d]].c).attr('stroke-width',2);
+    if(d===S.day) r.attr('stroke','#ffffff').attr('stroke-width',2);
+    r.on('mousemove',ev=>showTT(ev,`<b>${fmtD(d)}</b><br><span class="k">Active cells:</span> ${fmtN(s.active[d])}<br><span class="k">Harmonized FRP:</span> ${(s.frp[d]/1000).toFixed(2)} GW<br><span class="k">Alert:</span> ${LV[s.lvl[d]].i} ${LV[s.lvl[d]].n}`))
+     .on('mouseleave',hideTT).on('click',()=>setDay(d)); }
+  [1,10,20,31].forEach(dd=>svg.append('text').attr('x',left+(dd-1)*(cell+gap)+cell/2).attr('y',10).attr('text-anchor','middle').attr('font-size',10).attr('fill','var(--text-muted)').text(dd));
+  document.getElementById('calRamp').style.background=`linear-gradient(90deg,${[0.04,.3,.55,.8,1].map(fire).join(',')})`;
+}
+
+// ---------- daily stacked bars + alert strip ----------
+function daily(){
+  const s=S.series, svg=d3.select('#daily'); svg.selectAll('*').remove();
+  const w=svg.node().clientWidth||900, h=250, m={t:10,r:12,b:44,l:46}, strip=12;
+  svg.attr('height',h);
+  const x=d3.scaleBand().domain(d3.range(ND)).range([m.l,w-m.r]).paddingInner(ND>150?0.15:0.25);
+  const y=d3.scaleLinear().domain([0,(d3.max(s.active)||1)*1.08]).nice().range([h-m.b-strip-6,m.t]);
+  svg.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(w-m.l-m.r))).call(g=>g.select('.domain').remove()).call(g=>g.selectAll('line').attr('stroke','#2b2b28'));
+  const months=d3.utcMonths(dayDate(0), dayDate(ND-1));
+  const xa=svg.append('g').attr('class','axis').attr('transform',`translate(0,${h-m.b+14})`);
+  months.forEach(mo=>{const d=Math.round((mo-t0)/864e5); xa.append('text').attr('x',x(d)).attr('y',10).attr('font-size',11).text(d3.utcFormat('%b %Y')(mo));});
+  const layers=[['both',COL.both],['vonly',COL.viirs],['monly',COL.modis]];
+  const bw=x.bandwidth();
+  for(let d=0;d<ND;d++){ let base=0;
+    layers.forEach(([k,c])=>{ const v=s[k][d]; if(!v) return; const y0=y(base), y1=y(base+v);
+      svg.append('rect').attr('x',x(d)).attr('y',y1).attr('width',bw).attr('height',Math.max(0,y0-y1-(base>0?0:0))).attr('fill',c); base+=v; });
+    svg.append('rect').attr('x',x(d)).attr('y',h-m.b-strip).attr('width',Math.max(bw,1)).attr('height',strip).attr('fill',LV[s.lvl[d]].c);
+  }
+  svg.append('text').attr('x',m.l-6).attr('y',h-m.b-strip/2+4).attr('text-anchor','end').attr('font-size',10).attr('fill','var(--text-muted)').text('alert');
+  const cur=svg.append('line').attr('x1',x(S.day)+bw/2).attr('x2',x(S.day)+bw/2).attr('y1',m.t).attr('y2',h-m.b).attr('stroke','#fff').attr('stroke-width',1).attr('stroke-dasharray','3 3');
+  const hov=svg.append('line').attr('y1',m.t).attr('y2',h-m.b).attr('stroke','#8d8c84').attr('stroke-width',1).style('display','none');
+  svg.append('rect').attr('x',m.l).attr('y',0).attr('width',w-m.l-m.r).attr('height',h).attr('fill','transparent').style('cursor','pointer')
+    .on('mousemove',ev=>{ const [mx]=d3.pointer(ev); const d=Math.max(0,Math.min(ND-1,Math.floor((mx-m.l)/x.step()))); hov.style('display',null).attr('x1',x(d)+bw/2).attr('x2',x(d)+bw/2);
+      showTT(ev,`<b>${fmtD(d)}</b><br><i class="sw" style="background:${COL.both}"></i> Both: ${fmtN(s.both[d])}<br><i class="sw" style="background:${COL.viirs}"></i> VIIRS only: ${fmtN(s.vonly[d])}<br><i class="sw" style="background:${COL.modis}"></i> MODIS only: ${fmtN(s.monly[d])}<br><span class="k">FRP:</span> ${(s.frp[d]/1000).toFixed(2)} GW · <span class="k">alert:</span> ${LV[s.lvl[d]].i} ${LV[s.lvl[d]].n}`);})
+    .on('mouseleave',()=>{hov.style('display','none');hideTT();})
+    .on('click',ev=>{const [mx]=d3.pointer(ev); setDay(Math.max(0,Math.min(ND-1,Math.floor((mx-m.l)/x.step()))));});
+}
+
+// ---------- sensitivity ----------
+function sensitivity(){
+  const data=R.calibration.modis_sensitivity_by_viirs_frp, svg=d3.select('#sens'); svg.selectAll('*').remove();
+  const w=svg.node().clientWidth||500, h=330, m={t:18,r:10,b:40,l:42}; svg.attr('height',h);
+  const x=d3.scaleBand().domain(data.map(d=>d.frp_bin_mw)).range([m.l,w-m.r]).padding(0.28);
+  const y=d3.scaleLinear().domain([0,1]).range([h-m.b,m.t]);
+  svg.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5,'%').tickSize(-(w-m.l-m.r))).call(g=>g.select('.domain').remove()).call(g=>g.selectAll('line').attr('stroke','#2b2b28'));
+  svg.append('g').attr('class','axis').attr('transform',`translate(0,${h-m.b})`).call(d3.axisBottom(x).tickSize(0)).call(g=>g.select('.domain').attr('stroke','#33332f'));
+  svg.append('text').attr('x',(m.l+w-m.r)/2).attr('y',h-6).attr('text-anchor','middle').attr('font-size',11).attr('fill','var(--text-muted)').text('VIIRS FRP per cell-day (MW)');
+  data.forEach((d,i)=>{ const bx=x(d.frp_bin_mw), bw=x.bandwidth(), y1=y(d.p_modis_detects), r=Math.min(4,bw/2);
+    svg.append('path').attr('d',`M${bx},${h-m.b}V${y1+r}Q${bx},${y1} ${bx+r},${y1}H${bx+bw-r}Q${bx+bw},${y1} ${bx+bw},${y1+r}V${h-m.b}Z`).attr('fill',COL.both)
+      .on('mousemove',ev=>showTT(ev,`<b>${d.frp_bin_mw} MW</b><br>MODIS detects ${(d.p_modis_detects*100).toFixed(1)}%<br><span class="k">n =</span> ${fmtN(d.n)} VIIRS cell-days`)).on('mouseleave',hideTT);
+    if(i===0||i===data.length-1) svg.append('text').attr('x',bx+bw/2).attr('y',y1-5).attr('text-anchor','middle').attr('font-size',12).attr('font-weight',600).attr('fill','var(--text-primary)').text((d.p_modis_detects*100).toFixed(0)+'%'); });
+}
+
+// ---------- backcast ----------
+function backcast(){
+  const b=R.calibration.backcast, svg=d3.select('#bc'); svg.selectAll('*').remove();
+  document.getElementById('bcStats').innerHTML=[
+    ['Daily error, raw MODIS',(b.daily_mape_test_raw_modis*100).toFixed(0)+'%'],
+    ['Daily error, EmberSync',(b.daily_mape_test_model*100).toFixed(0)+'%'],
+    ['Tile-day R² (test)',b.tile_r2_test.toFixed(2)],
+    ['FRP ratio VIIRS/MODIS',R.calibration.frp_ratio_viirs_over_modis.toFixed(2)+'×']].map(s=>`<div class="kpi"><div class="l">${s[0]}</div><div class="v" style="font-size:19px">${s[1]}</div></div>`).join('');
+  const w=svg.node().clientWidth||500, h=220, m={t:12,r:10,b:30,l:46}; svg.attr('height',h);
+  const n=b.daily.viirs.length, x=d3.scaleLinear().domain([0,n-1]).range([m.l,w-m.r]);
+  const y=d3.scaleLinear().domain([0,d3.max(b.daily.viirs)*1.05]).nice().range([h-m.b,m.t]);
+  svg.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(w-m.l-m.r))).call(g=>g.select('.domain').remove()).call(g=>g.selectAll('line').attr('stroke','#2b2b28'));
+  d3.utcMonths(dayDate(0),dayDate(n-1)).forEach(mo=>{const d=Math.round((mo-t0)/864e5); svg.append('text').attr('x',x(d)).attr('y',h-10).attr('font-size',11).attr('fill','var(--text-muted)').text(d3.utcFormat('%b')(mo));});
+  const sx=x(b.split_day); svg.append('rect').attr('x',m.l).attr('y',m.t).attr('width',sx-m.l).attr('height',h-m.b-m.t).attr('fill','#ffffff').attr('opacity',.03);
+  svg.append('line').attr('x1',sx).attr('x2',sx).attr('y1',m.t).attr('y2',h-m.b).attr('stroke','#8d8c84').attr('stroke-dasharray','4 3');
+  svg.append('text').attr('x',sx-6).attr('y',m.t+12).attr('text-anchor','end').attr('font-size',11).text('train');
+  svg.append('text').attr('x',sx+6).attr('y',m.t+12).attr('font-size',11).text('test (unseen)');
+  const line=k=>d3.line().x((v,i)=>x(i)).y(v=>y(v)).curve(d3.curveMonotoneX)(b.daily[k]);
+  [['modis',COL.modis],['viirs',COL.both],['backcast',COL.viirs]].forEach(([k,c])=>svg.append('path').attr('d',line(k)).attr('fill','none').attr('stroke',c).attr('stroke-width',2).attr('stroke-linejoin','round'));
+  const hv=svg.append('line').attr('y1',m.t).attr('y2',h-m.b).attr('stroke','#8d8c84').style('display','none');
+  svg.append('rect').attr('x',m.l).attr('y',m.t).attr('width',w-m.l-m.r).attr('height',h-m.b-m.t).attr('fill','transparent')
+    .on('mousemove',ev=>{const i=Math.round(x.invert(d3.pointer(ev)[0])); if(i<0||i>=n) return; hv.style('display',null).attr('x1',x(i)).attr('x2',x(i));
+      showTT(ev,`<b>${fmtD(i)}</b> (national)<br><i class="sw" style="background:${COL.both}"></i> VIIRS observed: ${fmtN(b.daily.viirs[i])}<br><i class="sw" style="background:${COL.modis}"></i> MODIS raw: ${fmtN(b.daily.modis[i])}<br><i class="sw" style="background:${COL.viirs}"></i> Back-cast: ${fmtN(Math.round(b.daily.backcast[i]))}`);})
+    .on('mouseleave',()=>{hv.style('display','none');hideTT();});
+}
+
+// ---------- tables ----------
+function tables(){
+  const lt=R.lead_time;
+  document.getElementById('leadTbl').innerHTML='<tr><th>Region</th><th>Peak FRP day</th><th>First High alert</th><th class="n">Lead (days)</th></tr>'+
+    lt.map(r=>`<tr data-r="${r.region}" style="cursor:pointer"><td>${r.region}</td><td>${r.peak_date}</td><td>${r.first_high_alert||'—'}</td><td class="n">${r.lead_days??'—'}</td></tr>`).join('');
+  document.querySelectorAll('#leadTbl tr[data-r]').forEach(tr=>tr.onclick=()=>{sel.value=tr.dataset.r; sel.onchange(); const r=lt.find(x=>x.region===tr.dataset.r); setDay(Math.round((new Date(r.peak_date+'T00:00:00Z')-t0)/864e5)); window.scrollTo({top:0,behavior:'smooth'});});
+  const v=R.volume, a=R.agreement;
+  const rows=[['Raw detections ingested (4 satellites)',v.detections_in],['Static sources removed (flares, industry, offshore)',v.static_source_removed],
+    ['Unique hotspot pixels after cross-satellite de-dup',v.unique_hotspot_pixels],['Duplicate reduction',v.duplicate_reduction_pct+'%'],
+    ['Burning cell-days (0.1°)',a.cell_days],['… both sensors, same cell',a.both_same_cell],['… both sensors, neighbour cell',a.both_neighbour],
+    ['… VIIRS only',a.viirs_only],['… seen ONLY by NOAA-20 (joins '+(R.volume.platform_coverage['NOAA-20']||{}).min+')',a.noaa20_only_cell_days],['… MODIS only',a.modis_only],['FRP pairs used for cross-calibration',R.calibration.frp_pairs],
+    ['New-ignition cell-days flagged',R.flags.new_ignitions],['Escalating cell-days flagged',R.flags.escalating],['Pipeline run time (s)',R.run.seconds_total??(R.run.seconds_ingest+R.run.seconds_fuse)]];
+  document.getElementById('dqTbl').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td class="n">${typeof r[1]==='number'?fmtN(r[1]):r[1]}</td></tr>`).join('');
+}
+
+// ---------- CSV ----------
+function csv(){ const s=S.series; let out='date,active_cells,both_sensors,viirs_only,modis_only,frp_mw,unique_hotspots,new_ignitions,escalating,alert_level,alert_ratio\n';
+  for(let d=0;d<ND;d++) out+=[fmtD(d),s.active[d],s.both[d],s.vonly[d],s.monly[d],s.frp[d].toFixed(1),s.pix[d],s.ign[d],s.esc[d],LV[s.lvl[d]].n,s.ratio[d].toFixed(3)].join(',')+'\n'; return out; }
+function toast(t){const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; setTimeout(()=>el.style.display='none',2200);}
+document.getElementById('copyCsv').onclick=async()=>{ try{ await navigator.clipboard.writeText(csv()); toast('Area CSV copied to clipboard'); }catch(e){ toast('Clipboard blocked here — use Download on the hosted site'); } };
+document.getElementById('dlCsv').onclick=()=>{ try{ const b=new Blob([csv()],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='embersync_'+S.region.replace(/\W+/g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); toast('Download started (if your viewer allows downloads)'); }catch(e){ toast('Download blocked in this viewer'); } };
+
+// ---------- wiring ----------
+const slider=document.getElementById('slider'); slider.max=ND-1;
+function setDay(d){ S.day=d; slider.value=d; if(S.view!=='day'){S.view='day'; document.getElementById('mDay').classList.add('on'); document.getElementById('mSeason').classList.remove('on');} drawMap(); kpis(); calendar(); daily(); }
+slider.oninput=()=>setDay(+slider.value);
+function refreshArea(){ S.series=computeSeries(S.bbox); kpis(); calendar(); daily(); }
+sel.onchange=()=>{ if(sel.value==='__custom'){ document.getElementById('drawBtn').click(); return; } S.region=sel.value; S.bbox=M.regions[sel.value]; refreshArea(); drawBox(); };
+const tog=(a,b,key,val)=>{document.getElementById(a).onclick=()=>{S[key]=val; document.getElementById(a).classList.add('on'); document.getElementById(b).classList.remove('on'); drawMap();};};
+tog('mDay','mSeason','view','day'); tog('mSeason','mDay','view','season'); tog('cInt','cAgr','color','int'); tog('cAgr','cInt','color','agr');
+let timer=null; document.getElementById('play').onclick=()=>{ const btn=document.getElementById('play');
+  if(timer){clearInterval(timer);timer=null;btn.textContent='▶';return;} btn.textContent='❚❚';
+  timer=setInterval(()=>{ const d=(S.day+1)%ND; S.day=d; slider.value=d; if(S.view!=='day'){S.view='day';} drawMap(); kpis(); },180); };
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(()=>{sizeMap(); drawMap(); calendar(); daily(); sensitivity(); backcast();},150);});
+
+sizeMap(); S.series=computeSeries(S.bbox); slider.value=S.day; drawMap(); kpis(); calendar(); daily(); sensitivity(); backcast(); tables();
+window.__embersync={S,computeSeries,csv,N,ND};
+})();
+</script>
+</body>
+</html>
