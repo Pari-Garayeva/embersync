@@ -2,7 +2,10 @@
 
 **Project name:** EmberSync
 **Challenge:** Harmonization of MODIS and VIIRS Hot Spots
-**Project demo / final project link:** _<paste the public artifact or GitHub Pages link>_ · repo: _<GitHub link>_
+**Project Demo (form field):** 30-second video `EmberSync_demo_30s.mp4`, uploaded as *unlisted* to YouTube or as a public Google Drive link → paste that URL. Alternative: the 7-slide deck exported to PDF / public link.
+**Final Project (form field):** https://github.com/Pari-Garayeva/embersync
+**Live demo (put inside the description + README):** https://pari-garayeva.github.io/embersync/ (GitHub Pages, serves `docs/index.html`)
+_If the repo gets a different name, change `embersync` in both URLs._
 
 ---
 
